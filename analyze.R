@@ -2,6 +2,7 @@ library(readxl)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(readr)
 
 # LOADING
 
@@ -141,6 +142,18 @@ ggplot(jobs.open, aes(x=date, y=open)) +
 
 # ANALYZE JOB CATEGORIES
 
+simple.categories <- read.csv("simple.categories.csv")
+
+mapped <- simple.categories$simple[match(jobs.reduced$category, simple.categories$category)]
+
+jobs.with.simple <- jobs.reduced %>%
+  mutate(simple.category = simple.categories$simple[match(jobs.reduced$category, simple.categories$category)])
+
+jobs.with.simple %>%
+  group_by(simple.category) %>%
+  summarise(count=n()) %>%
+  arrange(desc(count))
+
 # CountOpenJobsByCategory <- function(d) {
 #   dJobs <- jobs.reduced %>%
 #     filter(d >= first.posted, d <= last.seen) %>%
@@ -158,15 +171,28 @@ ggplot(jobs.open, aes(x=date, y=open)) +
 #   ggtitle("Uber jobs") +
 #   labs(x="Date", y="Jobs", color="Series")
 
+# ANALYZE JOB FILL SPEED
+
+jobs.closed <- jobs.reduced %>%
+  filter(last.seen < dates[length(dates)]) %>%
+  mutate(days.to.close = as.numeric(last.seen - first.posted, units="days")) %>%
+  arrange(desc(days.to.close))
+
+write.csv(jobs.closed, "jobs.closed.csv", row.names=FALSE)
+
 # ANALYZE PITTSBURGH (SELF-DRIVING) JOBS
 
 jobs.pittsburgh <- jobs.reduced %>%
   filter(city == "Pittsburgh")
 
+write_csv(jobs.pittsburgh, "jobs.pittsburgh.csv")
+
 jobs.pittsburgh.open <- tibble(
   date=dates,
   open=sapply(dates, MakeJobCounter(jobs.pittsburgh))
 )
+
+write_csv(jobs.pittsburgh.open, "jobs.pittsburgh.open.csv")
 
 ggplot(jobs.pittsburgh.open, aes(x=date, y=open)) +
   geom_line() +
